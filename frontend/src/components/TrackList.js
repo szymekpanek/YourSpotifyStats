@@ -12,11 +12,10 @@ const TrackList = () => {
             headers: {
                 'Content-Type': 'application/json'
             },
-            credentials: 'include'  // Ciasteczka są dołączane do zapytania
+            credentials: 'include'
         })
             .then(response => {
                 if (response.status === 401) {
-                    // Jeśli użytkownik nie jest autoryzowany, przekieruj do logowania
                     window.location.href = 'http://localhost:8080/oauth2/authorization/spotify';
                     throw new Error('Unauthorized, redirecting to login');
                 }

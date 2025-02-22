@@ -1,6 +1,5 @@
 package panek.szymon.your_spotify_stats.service;
 
-
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -10,40 +9,25 @@ import org.springframework.security.oauth2.client.OAuth2AuthorizedClientService;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
-import org.springframework.web.reactive.function.client.WebClient;
-
 import panek.szymon.your_spotify_stats.dto.*;
 import panek.szymon.your_spotify_stats.model.*;
-import reactor.core.publisher.Mono;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
-public class SpotifyService implements ISpotifyService {
+public class SpotifyService {
 
-    private final WebClient webClient;
     private final RestTemplate restTemplate;
     private final OAuth2AuthorizedClientService authorizedClientService;
+    private final PopularityService popularityService;
 
-    public SpotifyService(WebClient.Builder webClientBuilder, RestTemplate restTemplate, OAuth2AuthorizedClientService authorizedClientService) {
-        this.webClient = webClientBuilder
-                .baseUrl("https://api.spotify.com")
-                .build();
+    public SpotifyService(RestTemplate restTemplate, OAuth2AuthorizedClientService authorizedClientService, PopularityService popularityService) {
         this.restTemplate = restTemplate;
         this.authorizedClientService = authorizedClientService;
+        this.popularityService = popularityService;
     }
 
-    @Override
-    public Mono<UserProfile> getUserProfile(String accessToken) {
-        return webClient.get()
-                .uri("/v1/me")
-                .header("Authorization", "Bearer " + accessToken)
-                .retrieve()
-                .bodyToMono(UserProfile.class);
-    }
-
-    @Override
     public List<Track> getUserTopTracks(OAuth2AuthenticationToken authentication) {
         // Pobieramy token dostępu
         String accessToken = getAccessToken(authentication);
@@ -57,8 +41,7 @@ public class SpotifyService implements ISpotifyService {
                 .collect(Collectors.toList());
     }
 
-
-    private String getAccessToken(OAuth2AuthenticationToken authentication) {
+    public String getAccessToken(OAuth2AuthenticationToken authentication) {
         OAuth2AuthorizedClient client = authorizedClientService.loadAuthorizedClient(
                 authentication.getAuthorizedClientRegistrationId(),
                 authentication.getName()
@@ -67,14 +50,12 @@ public class SpotifyService implements ISpotifyService {
     }
 
     private List<Track> getTopTracks(String accessToken) {
-        // Ustawiamy nagłówki z tokenem
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(accessToken);
 
         HttpEntity<Void> requestEntity = new HttpEntity<>(headers);
 
-        // Zapytanie o topowe utwory
-        String urlTopTracks = "https://api.spotify.com/v1/me/top/tracks?limit=20";
+        String urlTopTracks = "https://api.spotify.com/v1/me/top/tracks?limit=50";
         ResponseEntity<TopTracksResponseDTO> topTracksResponse = restTemplate.exchange(
                 urlTopTracks,
                 HttpMethod.GET,
@@ -82,7 +63,6 @@ public class SpotifyService implements ISpotifyService {
                 TopTracksResponseDTO.class
         );
 
-        topTracksResponse.getBody();
         return topTracksResponse.getBody().getItems();
     }
 
@@ -112,4 +92,14 @@ public class SpotifyService implements ISpotifyService {
 
         return track;
     }
+
+    public double getAveragePopularity(OAuth2AuthenticationToken authentication) {
+        // Pobieramy token dostępu
+        String accessToken = getAccessToken(authentication);
+
+        List<Track> favoriteTracks = getTopTracks(accessToken);
+
+        return popularityService.getAveragePopularity(favoriteTracks);
+    }
+
 }

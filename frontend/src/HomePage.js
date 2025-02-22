@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import TrackList from './components/TrackList';
-import './index.scss'; // Import stylów SCSS (nazwa pliku wg uznania)
+import './styles/index.scss'; // Import stylów SCSS (nazwa pliku wg uznania)
 
 const HomePage = () => {
     const navigate = useNavigate();
