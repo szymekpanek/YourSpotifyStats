@@ -11,12 +11,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import panek.szymon.your_spotify_stats.dto.*;
 import panek.szymon.your_spotify_stats.model.*;
+import reactor.core.publisher.Mono;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
-public class SpotifyService {
+public class SpotifyService implements ISpotifyService {
 
     private final RestTemplate restTemplate;
     private final OAuth2AuthorizedClientService authorizedClientService;
@@ -28,6 +29,7 @@ public class SpotifyService {
         this.popularityService = popularityService;
     }
 
+    @Override
     public List<Track> getUserTopTracks(OAuth2AuthenticationToken authentication) {
         // Pobieramy token dostępu
         String accessToken = getAccessToken(authentication);
@@ -41,6 +43,7 @@ public class SpotifyService {
                 .collect(Collectors.toList());
     }
 
+    @Override
     public String getAccessToken(OAuth2AuthenticationToken authentication) {
         OAuth2AuthorizedClient client = authorizedClientService.loadAuthorizedClient(
                 authentication.getAuthorizedClientRegistrationId(),
@@ -49,7 +52,8 @@ public class SpotifyService {
         return client.getAccessToken().getTokenValue();
     }
 
-    private List<Track> getTopTracks(String accessToken) {
+    @Override
+    public List<Track> getTopTracks(String accessToken) {
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(accessToken);
 
@@ -66,13 +70,15 @@ public class SpotifyService {
         return topTracksResponse.getBody().getItems();
     }
 
-    private List<Artist> getArtistsForTrack(Track track) {
+    @Override
+    public List<Artist> getArtistsForTrack(Track track) {
         return track.getArtists().stream()
                 .map(artist -> new Artist(artist.getId(), artist.getName()))
                 .collect(Collectors.toList());
     }
 
-    private Album getAlbumForTrack(Track track) {
+    @Override
+    public Album getAlbumForTrack(Track track) {
         Album album = new Album();
         album.setId(track.getAlbum().getId());
         album.setName(track.getAlbum().getName());
@@ -82,7 +88,8 @@ public class SpotifyService {
         return album;
     }
 
-    private Track mapTrackData(Track track) {
+    @Override
+    public Track mapTrackData(Track track) {
         List<Artist> artists = getArtistsForTrack(track);
         Album album = getAlbumForTrack(track);
 
@@ -93,6 +100,7 @@ public class SpotifyService {
         return track;
     }
 
+    @Override
     public double getAveragePopularity(OAuth2AuthenticationToken authentication) {
         // Pobieramy token dostępu
         String accessToken = getAccessToken(authentication);
